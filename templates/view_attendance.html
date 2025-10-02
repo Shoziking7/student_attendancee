@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Attendance - Attendance System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            border: none;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-chalkboard-teacher me-2"></i>Attendance System
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">Dashboard</a>
+                <a class="nav-link" href="/register_student">Register Student</a>
+                <a class="nav-link" href="/attendance">Take Attendance</a>
+                <a class="nav-link" href="/view_students">View Students</a>
+                <a class="nav-link active" href="/view_attendance">View Attendance</a>
+                <a class="nav-link" href="/view_report">Reports</a>
+                <a class="nav-link" href="/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="fas fa-list-alt me-2"></i>Attendance Records</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="GET" class="mb-4">
+                            <div class="row align-items-end">
+                                <div class="col-md-4">
+                                    <label for="date" class="form-label">Select Date</label>
+                                    <input type="date" class="form-control" id="date" name="date" value="{{ selected_date }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="module" class="form-label">Filter by Module</label>
+                                    <select class="form-select" id="module" name="module">
+                                        <option value="">All Modules</option>
+                                        {% for code, name in modules.items() %}
+                                            <option value="{{ code }}" {% if selected_module == code %}selected{% endif %}>
+                                                {{ code }} - {{ name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-primary me-2">Filter</button>
+                                    <a href="/view_attendance" class="btn btn-secondary">Clear</a>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        {% if attendance_records %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Student ID</th>
+                                            <th>Name</th>
+                                            <th>Time</th>
+                                            <th>Module</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in attendance_records %}
+                                            <tr>
+                                                <td>{{ record.student_id }}</td>
+                                                <td>{{ record.name }}</td>
+                                                <td>{{ record.time }}</td>
+                                                <td>
+                                                    <span class="badge bg-info">{{ record.module_code }}</span>
+                                                    <br>
+                                                    <small class="text-muted">{{ modules[record.module_code] }}</small>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No attendance records found for {{ selected_date }}{% if selected_module %} in {{ selected_module }}{% endif %}.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mt-3 text-center">
+                    <a href="/dashboard" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

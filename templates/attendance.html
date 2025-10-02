@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Attendance - Attendance System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { box-shadow: 0 0 15px rgba(0,0,0,0.1); border: none; border-radius: 10px; }
+        .btn-primary { background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); border: none; }
+        .btn-success { background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); border: none; }
+        video { border-radius: 10px; border: 2px solid #ddd; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-chalkboard-teacher me-2"></i>Attendance System
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">Dashboard</a>
+                <a class="nav-link" href="/register_student">Register Student</a>
+                <a class="nav-link active" href="/attendance">Take Attendance</a>
+                <a class="nav-link" href="/view_students">View Students</a>
+                <a class="nav-link" href="/view_report">Reports</a>
+                <a class="nav-link" href="/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="fas fa-camera me-2"></i>Take Attendance</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Module Selection -->
+                        <div class="mb-4">
+                            <label for="module_code" class="form-label">Select Module</label>
+                            <select class="form-select" id="module_code" name="module_code" required>
+                                {% for code, name in modules.items() %}
+                                    <option value="{{ code }}">{{ code }} - {{ name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select the module for which you're taking attendance</div>
+                        </div>
+
+                        <!-- Upload Photo Option -->
+                        <form method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="module_code" id="module_code_form" value="ALDS301">
+                            
+                            <div class="mb-4 text-center">
+                                <p class="lead">Upload a photo to capture attendance</p>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="photo" class="form-label">Select Photo</label>
+                                <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                                <div class="form-text">Take or upload a clear photo of the student's face.</div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-upload me-2"></i>Submit Uploaded Photo
+                                </button>
+                            </div>
+                        </form>
+
+                        <hr class="my-4">
+
+                        <!-- Camera Capture Option -->
+                        <div class="text-center mb-3">
+                            <p class="lead">Or capture a photo using your camera</p>
+                        </div>
+
+                        <div class="text-center">
+                            <video id="video" width="400" height="300" autoplay></video>
+                            <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+                        </div>
+                        <div class="d-grid mt-3">
+                            <button id="capture" class="btn btn-primary btn-lg">
+                                <i class="fas fa-camera me-2"></i>Capture & Submit
+                            </button>
+                        </div>
+
+                        <form id="cameraForm" action="/attendance" method="POST">
+                            <input type="hidden" name="camera_image" id="camera_image">
+                            <input type="hidden" name="module_code" id="module_code_camera" value="ALDS301">
+                        </form>
+                    </div>
+                </div>
+
+                <div class="mt-3 text-center">
+                    <a href="/dashboard" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Modal for Attendance Confirmation -->
+    <div class="modal fade" id="attendanceModal" tabindex="-1" aria-labelledby="attendanceModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-success text-white">
+            <h5 class="modal-title" id="attendanceModalLabel">Attendance Recorded</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            Attendance has been successfully taken!
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Camera access
+        const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => { 
+                console.error("Camera access error:", err); 
+                alert("Camera access denied. Please allow camera permissions.");
+            });
+
+        // Update module selection for both forms
+        const moduleSelect = document.getElementById('module_code');
+        const moduleForm = document.getElementById('module_code_form');
+        const moduleCamera = document.getElementById('module_code_camera');
+        
+        moduleSelect.addEventListener('change', function() {
+            moduleForm.value = this.value;
+            moduleCamera.value = this.value;
+        });
+
+        // Capture image
+        document.getElementById('capture').addEventListener('click', () => {
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const dataURL = canvas.toDataURL('image/jpeg'); // Base64
+            document.getElementById('camera_image').value = dataURL;
+
+            document.getElementById('cameraForm').submit();
+        });
+
+        // Show modal if flash message exists
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if 'success' in category %}
+                        var attendanceModal = new bootstrap.Modal(document.getElementById('attendanceModal'));
+                        attendanceModal.show();
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </script>
+</body>
+</html>

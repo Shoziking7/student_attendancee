@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Reports - Attendance System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            border: none;
+            border-radius: 10px;
+        }
+        .stats-card {
+            transition: transform 0.2s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .attendance-chart {
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-chalkboard-teacher me-2"></i>Attendance System
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">Dashboard</a>
+                <a class="nav-link" href="/register_student">Register Student</a>
+                <a class="nav-link" href="/attendance">Take Attendance</a>
+                <a class="nav-link" href="/view_students">View Students</a>
+                <a class="nav-link" href="/view_attendance">View Attendance</a>
+                <a class="nav-link active" href="/view_report">Reports</a>
+                <a class="nav-link" href="/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2><i class="fas fa-chart-bar me-2"></i>Attendance Reports</h2>
+                    <span class="text-muted">Generated on: {{ current_date }}</span>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Report Filters -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Report Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="date_filter" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date_filter" name="date_filter" value="{{ selected_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="module_filter" class="form-label">Module</label>
+                        <select class="form-select" id="module_filter" name="module_filter">
+                            <option value="">All Modules</option>
+                            {% for code, name in modules.items() %}
+                                <option value="{{ code }}" {% if selected_module == code %}selected{% endif %}>
+                                    {{ code }} - {{ name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-sync-alt me-2"></i>Generate Report
+                            </button>
+                            <a href="/view_report" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Reset
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-2x mb-2"></i>
+                        <h5>Total Students</h5>
+                        <h2>{{ total_students }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card bg-success text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <h5>Present Today</h5>
+                        <h2>{{ present_today }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-times-circle fa-2x mb-2"></i>
+                        <h5>Absent Today</h5>
+                        <h2>{{ absent_today }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card bg-info text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-percent fa-2x mb-2"></i>
+                        <h5>Attendance Rate</h5>
+                        <h2>{{ attendance_rate }}%</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module-wise Summary -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-book me-2"></i>Module-wise Attendance Today</h5>
+            </div>
+            <div class="card-body">
+                {% if module_summary %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Module</th>
+                                    <th>Present Students</th>
+                                    <th>Total Students</th>
+                                    <th>Attendance Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in module_summary %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ record.module_code }}</strong><br>
+                                            <small class="text-muted">{{ modules[record.module_code] }}</small>
+                                        </td>
+                                        <td>{{ record.present_count }}</td>
+                                        <td>{{ record.total_students }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if record.attendance_rate >= 80 %}success{% elif record.attendance_rate >= 60 %}warning{% else %}danger{% endif %}">
+                                                {{ record.attendance_rate }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No module attendance data available for today.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Student-wise Report -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-user-graduate me-2"></i>Student-wise Attendance Report</h5>
+            </div>
+            <div class="card-body">
+                {% if student_reports %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Total Present</th>
+                                    <th>Total Absent</th>
+                                    <th>Attendance %</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in student_reports %}
+                                    <tr>
+                                        <td>{{ student[0] }}</td>
+                                        <td>{{ student[1] }}</td>
+                                        <td>{{ student[2] }}</td>
+                                        <td>{{ student[3] }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if student[4] >= 80 %}success{% elif student[4] >= 60 %}warning{% else %}danger{% endif %}">
+                                                {{ student[4] }}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if student[4] >= 80 %}
+                                                <span class="badge bg-success">Good</span>
+                                            {% elif student[4] >= 60 %}
+                                                <span class="badge bg-warning">Average</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Poor</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No student attendance data available.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/dashboard" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
